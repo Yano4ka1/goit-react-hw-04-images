@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { useState } from "react";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -8,120 +8,112 @@ import { ImageGallery } from "./ImageGallery/ImageGallery";
 import { Modal } from "./Modal/Modal";
 import { Searchbar } from "./Searchbar/Searchbar";
 
-export class App extends Component{
-    state = {
-      isLoaded: false,
-      images: [],
-      page: 1,
-      searchInput: '',
-      saveSearchQuery: '',
-      loadMore: false,
-      currentPic: '',
-      modalShow: false,
-    }
+export const App = () => { 
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [images, setImages] = useState([]);
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [saveSearchQuery, setSaveSearchQuery] = useState('');
+  const [loadMore, setLoadMore] = useState(false);
+  const [currentPic, setCurrentPic] = useState('');
+  const [modalShow, setModalShow] = useState(false);
+
   
-    onFormSubmit = (e) => {
+    const onFormSubmit = (e) => {
       e.preventDefault();
       const searchQuery = e.target.elements.searchBar.value;
       if (searchQuery === '') {
         return toast.error('First enter a value in the field');
       }
-      this.setState({
-        loadMore: true,
-        isLoaded: true,
-        page: 1,
-          })
+      setLoadMore(true);
+      setIsLoaded(true);
+      setPage(1);
+ 
         apiSearch(searchQuery, 1)
           .then(res => {
             if (res.hits.length === 0) {
-              this.setState({
-              loadMore: false,
-            })
+            setLoadMore(false);
             return toast.error('Nothing found for this query');
             }
             toast.success(`Hooray! We found ${res.totalHits} images.`)
-          this.setState({
-            images: this.selectedProp(res.hits),
-          })
-          this.loadBtnHide(res);
+            setImages(selectedProp(res.hits));
+            loadBtnHide(res);
           }).catch(error => {
             toast.error('Something has gone wrong(')
             console.log(error)
           })
-        .finally(() => this.setState({
-          isLoaded: false,
-        searchInput: '',
-        saveSearchQuery: searchQuery,
-        }))
-    }
-    onSearchInput = (e) => {
+          .finally(() => {
+            setIsLoaded(false);
+            setSearchInput('');
+            setSaveSearchQuery(searchQuery);
+            setPage(page => page + 1);
+          })
+      }
+      const onSearchInput = (e) => {
           const queryValue = e.target.value;
-          this.setState({searchInput: queryValue,})
+          setSearchInput({queryValue})
     }
-    selectedProp = (hits) => {
+
+      const selectedProp = (hits) => {
       return hits.map(({ id, largeImageURL, webformatURL }) => {
         return { id, largeImageURL, webformatURL }
       })
     }
-    onImgClick = (e) => {
-      if (e.target.nodeName !== 'IMG') {
-      return;
+     const onImgClick = (e) => {
+        if (e.target.nodeName !== 'IMG') {
+        return;
+      }
+
+        const currentPic = e.target;
+
+        const saveCurrentPic = images.filter(img => img.webformatURL === currentPic.src);
+        setCurrentPic(saveCurrentPic[0].largeImageURL);
+        modalToggle();
     }
-      const currentPic = e.target;
-      const saveCurrentPic = this.state.images.filter(img => img.webformatURL === currentPic.src);
-      this.setState({
-        currentPic: saveCurrentPic[0].largeImageURL,
-      })
-      this.modalToggle();
+
+      const modalToggle = () => {
+        setModalShow(modalShow =>!modalShow);
     }
-    modalToggle = () => {
-      this.setState(({modalShow})=>({
-        modalShow: !modalShow,
-      }))
-    }
-    onLoadBtnClick = async () => {
-        await this.setState(prev => ({
-          page: prev.page + 1,
-          isLoaded: true,
-        }))
-          apiSearch(this.state.saveSearchQuery, this.state.page)
+
+      function onLoadBtnClick () {
+        setIsLoaded(true);
+        apiSearch(saveSearchQuery, page)
             .then(res => {
-              const correctlyHits = this.selectedProp(res.hits);
-          this.setState((prev) => ({
-            images: [...prev.images, ...correctlyHits],
-          }))
-          this.loadBtnHide(res);
+            const correctlyHits = selectedProp(res.hits);
+            setImages(prev => [...prev, ...correctlyHits])
+            loadBtnHide(res);
         })
         .catch(error => console.log(error))
-        .finally(this.setState({
-        isLoaded:false,
-        }))
+        .finally(() => {
+          setIsLoaded(false)
+          setPage(page => page + 1);
+        }
+        )
     }
-    loadBtnHide = (res) => {
+    
+      const loadBtnHide = (res) => {
         const totalPages = Math.ceil(res.totalHits / 12);
-          if (totalPages <= this.state.page) {
-            this.setState({
-              loadMore: false,
-            })
+          if (totalPages <= page) {
+            setLoadMore(false);
             return toast.error("We're sorry, but you've reached the end of search results.");
           }
       }
-    render() {
+
       return <>
-        <Searchbar onSubmit={this.onFormSubmit}
-          onInput={this.onSearchInput}
-          searchValue={this.state.searchInput} />
+        <Searchbar onSubmit={onFormSubmit}
+          onInput={onSearchInput}
+          searchValue={searchInput} />
         <ImageGallery
-          imgs={this.state.images}
-          onImgClick={this.onImgClick } />
-        {this.state.loadMore && <Button
-          loadMoreFunc={this.onLoadBtnClick}
-          status={ this.state.isLoaded } />
+          imgs={images}
+          onImgClick={onImgClick } />
+        {loadMore && <Button
+          loadMoreFunc={onLoadBtnClick}
+          status={ isLoaded } />
         }
-        {this.state.modalShow && <Modal
-          currentPic={this.state.currentPic}
-          toggleFunc={this.modalToggle} />}
+        {modalShow && <Modal
+          currentPic={currentPic}
+          toggleFunc={modalToggle} />}
         <ToastContainer />
       </>
     }
-  }
+  

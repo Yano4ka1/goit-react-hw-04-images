@@ -1,34 +1,33 @@
 import style from '../Styles.module.css';
 import PropTypes from 'prop-types';
-import React, { Component } from "react";
+import React,{ useEffect } from "react";
 
-export class Modal extends Component {
-    
-    componentDidMount(){
-        window.addEventListener('keydown', this.escapeClose);
-    }
-    componentWillUnmount() {
-        window.removeEventListener('keydown', this.escapeClose);
-    }
-    escapeClose = (e) => {
-        if (e.code === 'Escape') {
-            this.props.toggleFunc();
+export const Modal = ({toggleFunc, currentPic}) => {
+
+    useEffect(() => {
+        const escapeClose = (e) => {
+            if (e.code === 'Escape') {
+                toggleFunc();
+            }
         }
-    }
-    onOverlayClick = (e) => {
-        if (e.currentTarget === e.target) {
-            this.props.toggleFunc();
+            window.addEventListener('keydown', escapeClose);
+
+            return () => window.removeEventListener('keydown', escapeClose)
+        }, [toggleFunc])
+   
+        const onOverlayClick = (e) => {
+            if (e.currentTarget === e.target) {
+                toggleFunc();
+            }
         }
-    }
-    render() {
+ 
         return <>
-            <div className={style.Overlay} onClick={this.onOverlayClick}>
-                <div className={style.Modal}>
-                    <img src={this.props.currentPic} alt="" />
+                <div className={style.Overlay} onClick={onOverlayClick}>
+                    <div className={style.Modal}>
+                        <img src={currentPic} alt="" />
+                    </div>
                 </div>
-            </div>
             </>
-    }
     }
 
     Modal.propTypes = {
